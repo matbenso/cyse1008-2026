@@ -1,6 +1,6 @@
 {
   "projects": {
-    "default": "cyse1008-2026-8490d",
+    "default": "cyse1008-2026",
     "staging": "cyse1008-2026-8490d-staging",
     "prod": "cyse1008-2026-8490d-prod"
   },
