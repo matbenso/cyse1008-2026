@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Assignment 6 - Stripe Checkout &amp; Order Confirmation</title>
+</head>
+<body>
+<div style="max-width: 900px;">
+
+  <h2><strong>
+    <img role="presentation"
+      src="https://loyalistcollege.instructure.com/courses/19609/files/6122568/preview"
+      data-api-endpoint="https://loyalistcollege.instructure.com/api/v1/courses/19609/files/6122568"
+      data-api-returntype="File" />
+    Assignment Overview
+  </strong></h2>
+
+  <div style="padding: 14px 16px; border: 1px solid #ddd; border-radius: 6px; background: #fff;">
+    <p><strong>Assignment 6:</strong> Stripe Checkout &amp; Order Confirmation</p>
+    <p><strong>Purpose:</strong> This is the final assignment for CYSE1008. You will configure
+      real (test-mode) Stripe credentials, run a complete end-to-end checkout through the
+      Black River Market app, and verify that the order is confirmed on the success page and
+      recorded in Firestore. You will then make two small code changes to display the
+      customer email on the success page. Everything uses Stripe's <strong>test mode</strong>
+      — no real money is charged.</p>
+    <p><strong>Points:</strong> 25 (final assignment — 25% of course grade)</p>
+    <p><strong>Submission Type:</strong> GitHub repository URL + screenshots + short written answers</p>
+    <p><strong>What you will do:</strong></p>
+    <ul>
+      <li>Answer conceptual questions about <strong>environment variables</strong>,
+        <strong>Stripe test mode</strong>, <strong>Checkout Sessions</strong>, and
+        <strong>webhooks</strong></li>
+      <li>Add your Stripe test credentials to <code>.env.development</code> and restart the app</li>
+      <li>Browse the store, add a product to cart, and complete checkout using the test card
+        <code>4242 4242 4242 4242</code></li>
+      <li>Confirm the order appears on the success page and in the Firebase Emulator</li>
+      <li>Add the customer email field to the confirm-session API response and the success page</li>
+      <li>Commit and push your work to GitHub</li>
+    </ul>
+  </div>
+
+  <p><img style="width: 100%;" role="presentation"
+    src="https://loyalistcollege.instructure.com/courses/19609/files/6121996/preview"
+    data-api-endpoint="https://loyalistcollege.instructure.com/api/v1/courses/19609/files/6121996"
+    data-api-returntype="File" /></p>
+
+  <!-- ===== SETUP ===== -->
+  <h2><strong>
+    <img role="presentation"
+      src="https://loyalistcollege.instructure.com/courses/19609/files/6122177/preview"
+      data-api-endpoint="https://loyalistcollege.instructure.com/api/v1/courses/19609/files/6122177"
+      data-api-returntype="File" />
+    Required Setup
+  </strong></h2>
+
+  <div style="padding: 14px 16px; border: 1px solid #ddd; border-radius: 6px; background: #fff;">
+    <p><strong>Important:</strong> Keep your own GitHub repo as <strong>origin</strong> and the
+      instructor repo as <strong>upstream</strong>.</p>
+
+    <h3 style="color: #8b1e41;"><strong>1) Check your remotes</strong></h3>
+    <pre><code class="language-bash">git remote -v</code></pre>
+    <p>If <code>upstream</code> does not exist yet, add it:</p>
+    <pre><code class="language-bash">git remote add upstream https://github.com/Loyalist-College-CCoulter-Courses/cyse1008-2026.git</code></pre>
+
+    <h3 style="color: #8b1e41;"><strong>2) Fetch and reset to the latest instructor version</strong></h3>
+    <pre><code class="language-bash">git fetch upstream
+git reset --hard upstream/feature/assignmentFinal</code></pre>
+
+    <h3 style="color: #8b1e41;"><strong>3) Create your working branch</strong></h3>
+    <pre><code class="language-bash">git checkout -b feature/assignmentFinal</code></pre>
+
+    <h3 style="color: #8b1e41;"><strong>4) Stripe credentials</strong></h3>
+    <p>The repo includes a file called <code>.env.stripe.test</code> that contains
+      Stripe <strong>test-mode</strong> credentials. The dev server loads it automatically
+      — you do not need to copy or edit anything to get started.</p>
+    <p>If you prefer to use your own free Stripe account instead, go to
+      <a href="https://stripe.com" target="_blank">stripe.com</a>, sign up (no credit card
+      required), switch to <strong>Test mode</strong> in the top-right corner, and copy
+      your secret key from <strong>Developers &rarr; API keys</strong>. Add it to your
+      <code>.env.development</code> file as <code>STRIPE_SECRET_KEY=sk_test_...</code>
+      and it will override the shared key.</p>
+
+    <h3 style="color: #8b1e41;"><strong>5) Start the app and emulators</strong></h3>
+    <p>You need <strong>both</strong> the dev server and the Firebase emulators running for this assignment.</p>
+    <p>In one terminal:</p>
+    <pre><code class="language-bash">npm run dev</code></pre>
+    <p>In a second terminal:</p>
+    <pre><code class="language-bash">npm run dev:emulators</code></pre>
+    <p>The web app runs on <strong>http://localhost:3032</strong>.
+      The Firebase Emulator UI is at <strong>http://localhost:4000</strong>.</p>
+  </div>
+
+  <p><img style="width: 100%;" role="presentation"
+    src="https://loyalistcollege.instructure.com/courses/19609/files/6121996/preview"
+    data-api-endpoint="https://loyalistcollege.instructure.com/api/v1/courses/19609/files/6121996"
+    data-api-returntype="File" /></p>
+
+  <!-- ===== GUIDELINES ===== -->
+  <h2><strong>
+    <img role="presentation"
+      src="https://loyalistcollege.instructure.com/courses/19609/files/6122177/preview"
+      data-api-endpoint="https://loyalistcollege.instructure.com/api/v1/courses/19609/files/6122177"
+      data-api-returntype="File" />
+    Guidelines and Steps
+  </strong></h2>
+
+  <div style="padding: 14px 16px; border: 1px solid #ddd; border-radius: 6px; background: #fff;">
+
+    <!-- ===== PART A ===== -->
+    <h3 style="color: #8b1e41;"><strong>Part A - Ideas (10 points)</strong></h3>
+    <p>Answer the following questions in your own words. Submit these as Canvas text or in a
+      README. No code changes are required for Part A.</p>
+    <p><strong>To earn Excellent:</strong> answer all four questions clearly and completely.</p>
+
+    <ol>
+      <li>
+        <strong>Environment Variables &amp; Secrets</strong>
+        <ul>
+          <li>What is an environment variable? Why do we store secret keys like
+            <code>STRIPE_SECRET_KEY</code> in <code>.env.development</code> instead of
+            writing them directly in JavaScript code?</li>
+          <li>What does the <code>NEXT_PUBLIC_</code> prefix mean in Next.js?
+            Why would we <em>not</em> use <code>NEXT_PUBLIC_STRIPE_SECRET_KEY</code> as
+            the variable name for our Stripe secret key?</li>
+          <li>This project commits <code>.env.stripe.test</code> to the repo even though
+            it contains a secret key. What two conditions make this acceptable here?
+            What would make it unacceptable?</li>
+        </ul>
+      </li>
+
+      <li>
+        <strong>Test Mode vs Live Mode</strong>
+        <ul>
+          <li>What is the difference between Stripe's <strong>test mode</strong> and
+            <strong>live mode</strong>? Does the test card
+            <code>4242 4242 4242 4242</code> charge a real credit card?</li>
+          <li>What does the prefix <code>sk_test_</code> tell you about a Stripe API key?
+            How does it differ from a key that starts with <code>sk_live_</code>?</li>
+          <li>A classmate accidentally uses their <code>sk_live_</code> key in their
+            development environment instead of the test key. What is the risk?</li>
+        </ul>
+      </li>
+
+      <li>
+        <strong>The Stripe Checkout Session</strong>
+        <ul>
+          <li>When the user clicks "Pay with Stripe", our app calls
+            <code>POST /api/stripe/create-session</code>. What does that route return,
+            and what does the browser do with it?</li>
+          <li>After paying on Stripe's hosted page, the browser is redirected back to
+            <code>/checkout/success?order=...&amp;session_id=...</code>.
+            Where does the <code>session_id</code> in the URL come from?</li>
+          <li>The success page polls <code>/api/stripe/confirm-session</code> repeatedly
+            (every 1.5 seconds) instead of checking just once. Why might a single check
+            immediately after redirect be unreliable?</li>
+        </ul>
+      </li>
+
+      <li>
+        <strong>Webhooks (in context of a real checkout)</strong>
+        <ul>
+          <li>Look at <code>src/app/api/stripe/webhook/route.js</code> in the project.
+            What event type triggers the handler, and what two things does it update
+            on the Firestore order document?</li>
+          <li>The webhook handler calls
+            <code>stripe.webhooks.constructEvent(buf, sig, secret)</code>.
+            What does this function verify, and what kind of attack does it prevent?</li>
+          <li>The app creates the Firestore order document <strong>before</strong>
+            redirecting to Stripe's checkout page. If the order document were created
+            <strong>after</strong> payment instead, what could go wrong?</li>
+        </ul>
+      </li>
+    </ol>
+
+    <!-- ===== PART B ===== -->
+    <h3 style="color: #8b1e41;"><strong>Part B - Connections (10 points)</strong></h3>
+    <p>Follow each step below. Take the required screenshots as you go. Answer all questions
+      to earn full marks.</p>
+
+    <!-- Step 1 -->
+    <h4><strong>Step 1 - Verify Stripe credentials are loaded</strong></h4>
+    <p>After fetching from upstream, your repo already contains a file called
+      <code>.env.stripe.test</code>. The dev server loads it automatically alongside
+      your <code>.env.development</code> — <strong>no copy or edit is needed</strong>
+      to use the shared test credentials.</p>
+    <p>Open <code>.env.stripe.test</code> in the project root and read it. You will see
+      two variables:</p>
+    <pre><code>STRIPE_SECRET_KEY=sk_test_...
+NEXT_PUBLIC_SITE_URL=http://localhost:3032</code></pre>
+    <p>Note that <code>.env.stripe.test</code> is committed to the repo but
+      <code>.env.development</code> is not — check <code>.gitignore</code> to see why.</p>
+
+    <p><strong>To earn Excellent on this step:</strong></p>
+    <ul>
+      <li>Screenshot <code>.env.stripe.test</code> showing the two variables
+        (you may blur the key value)</li>
+      <li>Answer: <code>NEXT_PUBLIC_SITE_URL</code> uses the <code>NEXT_PUBLIC_</code>
+        prefix but <code>STRIPE_SECRET_KEY</code> does not. What is the practical
+        difference between these two variables in terms of where their values end up
+        (server only vs. also sent to the browser)?</li>
+      <li>Answer: <code>.env.stripe.test</code> is committed to this private repo even
+        though it contains a secret key. Why is this acceptable here but would be a
+        serious problem on a public repo or with a live key?</li>
+    </ul>
+
+    <!-- Step 2 -->
+    <h4><strong>Step 2 - Browse the store and add a product to cart</strong></h4>
+    <p>Navigate to <strong>http://localhost:3032</strong>. Browse the store and click on
+      any product. On the product detail page, select any available options (size, colour,
+      etc.) and click <strong>Add to Cart</strong>. Confirm the item appears in your cart.</p>
+
+    <p><strong>To earn Excellent on this step:</strong></p>
+    <ul>
+      <li>Screenshot showing the product added to the cart (cart icon with item count,
+        or the cart drawer/page open with the item visible)</li>
+      <li>Answer: at this point the cart has not been saved to a database. Where is the
+        cart data actually stored? (Hint: it lives in browser memory as React state
+        managed by the checkout context — not in Firestore and not in
+        <code>localStorage</code>)</li>
+    </ul>
+
+    <!-- Step 3 -->
+    <h4><strong>Step 3 - Go through checkout to the Stripe page</strong></h4>
+    <p>Go to <strong>/product/checkout</strong> (or click the cart icon and proceed to
+      checkout). The checkout has three steps:</p>
+    <ol>
+      <li><strong>Cart</strong> - review your items</li>
+      <li><strong>Billing address</strong> - fill in your name, address, email, and
+        select a delivery option</li>
+      <li><strong>Payment</strong> - click <strong>"Pay with Stripe"</strong></li>
+    </ol>
+    <p>After clicking "Pay with Stripe" your browser will be redirected to Stripe's
+      hosted checkout page. Enter the following test card details:</p>
+    <ul>
+      <li><strong>Card number:</strong> <code>4242 4242 4242 4242</code></li>
+      <li><strong>Expiry:</strong> any future date (e.g. <code>12/30</code>)</li>
+      <li><strong>CVC:</strong> any three digits (e.g. <code>123</code>)</li>
+      <li><strong>Name on card:</strong> anything</li>
+    </ul>
+    <p><strong>Do not click Pay yet</strong> - take your screenshot first.</p>
+
+    <p><strong>To earn Excellent on this step:</strong></p>
+    <ul>
+      <li>Screenshot the Stripe-hosted checkout page with the test card number entered
+        (before clicking Pay) — the URL in your browser should show
+        <code>checkout.stripe.com</code></li>
+      <li>Answer: why is the payment page hosted on <code>stripe.com</code> instead of
+        our own <code>localhost:3032</code> domain? What security benefit does
+        this provide?</li>
+      <li>Answer: open <code>src/app/api/stripe/create-session/route.js</code> and
+        look at the <code>success_url</code> field passed to
+        <code>stripe.checkout.sessions.create()</code>. What URL will the browser be
+        sent to after a successful payment?</li>
+    </ul>
+
+    <!-- Step 4 -->
+    <h4><strong>Step 4 - See the order confirmed on the success page</strong></h4>
+    <p>Click <strong>Pay</strong> on Stripe's page. Stripe will process the test payment
+      and redirect your browser back to <code>/checkout/success</code>.</p>
+    <p>The success page polls <code>/api/stripe/confirm-session</code> every 1.5 seconds
+      until Stripe confirms the payment. You should see a loading spinner followed by
+      <strong>"Payment confirmed!"</strong> and an order summary showing the Order ID,
+      Stripe status, Payment status, Amount, and Currency.</p>
+
+    <p><strong>To earn Excellent on this step:</strong></p>
+    <ul>
+      <li>Screenshot the success page showing <strong>"Payment confirmed!"</strong>
+        with the order summary (Order ID, amount, status visible)</li>
+      <li>Answer: open DevTools (F12) and go to the <strong>Network</strong> tab.
+        Reload the success page (or check the calls already made). What URL does
+        the page repeatedly call while waiting for confirmation?</li>
+      <li>Answer: inside <code>src/app/api/stripe/confirm-session/route.js</code>,
+        the route calls <code>stripe.checkout.sessions.retrieve(sessionId)</code>.
+        Is this reading data from <em>our</em> Firestore database, or is it making a
+        live request directly to <strong>Stripe's servers</strong>? What does
+        this mean if Stripe's servers are slow to update?</li>
+    </ul>
+
+    <!-- Step 5 -->
+    <h4><strong>Step 5 - Find the order in the Firebase Emulator</strong></h4>
+    <p>Open the Firebase Emulator UI at
+      <strong>http://localhost:4000</strong>, click on
+      <strong>Firestore</strong>, and navigate to the <strong>orders</strong>
+      collection. Find the order document that was just created — the document ID
+      should match the Order ID shown on the success page.</p>
+
+    <p><strong>To earn Excellent on this step:</strong></p>
+    <ul>
+      <li>Screenshot the order document in the Emulator UI, with fields such as
+        <code>status</code>, <code>total</code>, <code>email</code>, and
+        <code>items</code> visible</li>
+      <li>Answer: the order was created with <code>status: "pending"</code> before
+        the browser was redirected to Stripe. Without the webhook running locally,
+        does the document show <code>"pending"</code> or <code>"paid"</code>?
+        What would need to happen for the status to change to <code>"paid"</code>?</li>
+      <li>Answer: find the <code>items</code> array inside the order document.
+        What information is stored for each item in the array?</li>
+    </ul>
+
+    <!-- ===== PART C ===== -->
+    <h3 style="color: #8b1e41;"><strong>Part C - Extensions (5 points)</strong></h3>
+    <p>The success page currently shows five fields: Order ID, Stripe status, Payment status,
+      Amount, and Currency. You will add the <strong>customer email</strong> by making
+      one small change to the backend API route and one small change to the frontend
+      success page.</p>
+
+    <h4><strong>Change 1 - Backend: add <code>customer_email</code> to the API response</strong></h4>
+    <p>Open <code>src/app/api/stripe/confirm-session/route.js</code>.</p>
+    <p>Find the <code>return NextResponse.json({...})</code> call. It currently returns
+      these fields:</p>
+    <pre><code class="language-js">return NextResponse.json({
+  ok: true,
+  paid,
+  status: session.status,
+  payment_status: session.payment_status,
+  amount_total: session.amount_total,
+  currency: session.currency,
+  orderId: session.metadata?.orderId ?? null,
+});</code></pre>
+    <p>Add <strong>one line</strong> after the <code>orderId</code> line:</p>
+    <pre><code class="language-js">return NextResponse.json({
+  ok: true,
+  paid,
+  status: session.status,
+  payment_status: session.payment_status,
+  amount_total: session.amount_total,
+  currency: session.currency,
+  orderId: session.metadata?.orderId ?? null,
+  customer_email: session.customer_email ?? null,
+});</code></pre>
+
+    <h4><strong>Change 2 - Frontend: display the email on the success page</strong></h4>
+    <p>Open <code>src/app/checkout/success/page.jsx</code>.</p>
+    <p>Find the <code>orderSummary</code> array inside the <code>useMemo</code> hook.
+      It currently looks like this:</p>
+    <pre><code class="language-js">return [
+  { label: 'Order ID', value: result.orderId || '—' },
+  { label: 'Stripe status', value: result.status || 'pending' },
+  { label: 'Payment status', value: result.payment_status || 'processing' },
+  {
+    label: 'Amount',
+    value: amount !== null ? currencyFormatter.format(amount) : '—',
+  },
+  { label: 'Currency', value: (result.currency || 'cad').toUpperCase() },
+];</code></pre>
+    <p>Add <strong>one entry</strong> after the <code>Order ID</code> line:</p>
+    <pre><code class="language-js">return [
+  { label: 'Order ID', value: result.orderId || '—' },
+  { label: 'Customer email', value: result.customer_email || '—' },
+  { label: 'Stripe status', value: result.status || 'pending' },
+  { label: 'Payment status', value: result.payment_status || 'processing' },
+  {
+    label: 'Amount',
+    value: amount !== null ? currencyFormatter.format(amount) : '—',
+  },
+  { label: 'Currency', value: (result.currency || 'cad').toUpperCase() },
+];</code></pre>
+
+    <h4><strong>Run another full checkout and screenshot the result</strong></h4>
+    <p>Save both files. The dev server will reload automatically. Run a second full checkout
+      from start to finish using the same test card. When you reach the success page, the
+      order summary should now include a <strong>Customer email</strong> row showing the
+      email address you entered during checkout.</p>
+
+    <p><strong>To earn Excellent (5):</strong></p>
+    <ul>
+      <li>Screenshot the success page showing <strong>"Payment confirmed!"</strong> with
+        the <strong>Customer email</strong> field visible in the order summary</li>
+      <li>Answer: you changed the API response (backend) and the display array (frontend),
+        but the overall structure of both files stayed the same. What does this tell you
+        about how an API response and a UI component work together? (Think about the
+        contract between what the API sends and what the UI reads.)</li>
+      <li>Answer: <code>session.customer_email</code> is a field on Stripe's session object.
+        Who originally provided this email address? (Hint: look at
+        <code>src/app/api/stripe/create-session/route.js</code> — what field is passed
+        to <code>stripe.checkout.sessions.create()</code> that causes Stripe to capture
+        the email?)</li>
+    </ul>
+
+  </div>
+
+  <p><img style="width: 100%;" role="presentation"
+    src="https://loyalistcollege.instructure.com/courses/19609/files/6121996/preview"
+    data-api-endpoint="https://loyalistcollege.instructure.com/api/v1/courses/19609/files/6121996"
+    data-api-returntype="File" /></p>
+
+  <!-- ===== GIT ===== -->
+  <h2><strong>
+    <img role="presentation"
+      src="https://loyalistcollege.instructure.com/courses/19609/files/6122146/preview"
+      data-api-endpoint="https://loyalistcollege.instructure.com/api/v1/courses/19609/files/6122146"
+      data-api-returntype="File" />
+    Git Requirements and Submission
+  </strong></h2>
+
+  <div style="padding: 14px 16px; border: 1px solid #ddd; border-radius: 6px; background: #fff;">
+    <h3 style="color: #8b1e41;"><strong>Commit and Push Your Work</strong></h3>
+    <p>After completing Part C, commit your two changed files and push to GitHub:</p>
+    <pre><code class="language-bash">git status
+git add .
+git commit -m "Assignment 6: Stripe checkout and order confirmation"
+git push origin HEAD</code></pre>
+    <p>If this is your first push to this branch, use:</p>
+    <pre><code class="language-bash">git push -u origin HEAD</code></pre>
+    <p><strong>Do not commit <code>.env.development</code></strong> — it should already be
+      listed in <code>.gitignore</code>. Run <code>git status</code> before committing to
+      confirm it does not appear in the list of files to be staged.</p>
+
+    <h3 style="color: #8b1e41;"><strong>Troubleshooting Documentation</strong></h3>
+    <p>If something does not work as expected, include a short note describing:</p>
+    <ul>
+      <li>What problem you encountered</li>
+      <li>What you tried to fix it</li>
+      <li>What happened as a result</li>
+    </ul>
+    <p>A screenshot of an error message is valid troubleshooting evidence.
+      Common issues to check:</p>
+    <ul>
+      <li>Dev server not restarted after updating <code>.env.development</code></li>
+      <li>Firebase emulators not running (orders collection will be empty)</li>
+      <li>Wrong key used (live key instead of test key)</li>
+      <li><code>NEXT_PUBLIC_SITE_URL</code> missing (success redirect will fail)</li>
+    </ul>
+
+    <h3 style="color: #8b1e41;"><strong>Submission</strong></h3>
+    <ul>
+      <li>GitHub repository URL (your <code>feature/assignmentFinal</code> branch)</li>
+      <li>Part A written answers (all four questions)</li>
+      <li>Screenshot: <code>.env.development</code> with key value blurred/redacted</li>
+      <li>Screenshot: product added to cart</li>
+      <li>Screenshot: Stripe-hosted checkout page with test card entered
+        (before clicking Pay)</li>
+      <li>Screenshot: success page showing "Payment confirmed!" with order summary</li>
+      <li>Screenshot: order document in the Firebase Emulator UI</li>
+      <li>Screenshot: success page showing "Customer email" field (Part C)</li>
+      <li>Troubleshooting note (if needed)</li>
+    </ul>
+  </div>
+
+  <p><img style="width: 100%;" role="presentation"
+    src="https://loyalistcollege.instructure.com/courses/19609/files/6121996/preview"
+    data-api-endpoint="https://loyalistcollege.instructure.com/api/v1/courses/19609/files/6121996"
+    data-api-returntype="File" /></p>
+
+  <!-- ===== CHECKLIST ===== -->
+  <h2><strong>Submission Checklist</strong></h2>
+  <div style="padding: 14px 16px; border: 1px solid #ddd; border-radius: 6px; background: #fff;">
+    <ul>
+      <li>&#x2705; I answered Part A Q1: what an environment variable is, what
+        <code>NEXT_PUBLIC_</code> means, and what to do if a secret key is accidentally
+        committed</li>
+      <li>&#x2705; I answered Part A Q2: the difference between test mode and live mode,
+        what <code>sk_test_</code> means, and the risk of using a live key in development</li>
+      <li>&#x2705; I answered Part A Q3: what the create-session route returns, where the
+        <code>session_id</code> comes from, and why polling is more reliable than a
+        single check</li>
+      <li>&#x2705; I answered Part A Q4: what event triggers the webhook, what
+        <code>constructEvent</code> verifies, and why the order is created before
+        redirecting to Stripe</li>
+      <li>&#x2705; I opened <code>.env.stripe.test</code>, read the two variables, and took a screenshot</li>
+      <li>&#x2705; I browsed the store, added a product to cart, and took a screenshot</li>
+      <li>&#x2705; I completed checkout and took a screenshot of the Stripe page with the
+        test card entered</li>
+      <li>&#x2705; I clicked Pay and took a screenshot of the success page showing
+        "Payment confirmed!" and the order summary</li>
+      <li>&#x2705; I found the order document in the Firebase Emulator and took a screenshot</li>
+      <li>&#x2705; I added <code>customer_email</code> to the confirm-session API response</li>
+      <li>&#x2705; I added the "Customer email" row to the success page
+        <code>orderSummary</code> array</li>
+      <li>&#x2705; I ran a second checkout and took a screenshot of the success page
+        showing the Customer email field</li>
+      <li>&#x2705; I committed and pushed my changes (without committing
+        <code>.env.development</code>)</li>
+      <li>&#x2705; I included troubleshooting notes if anything did not work</li>
+    </ul>
+  </div>
+
+  <p><img style="width: 100%;" role="presentation"
+    src="https://loyalistcollege.instructure.com/courses/19609/files/6121996/preview"
+    data-api-endpoint="https://loyalistcollege.instructure.com/api/v1/courses/19609/files/6121996"
+    data-api-returntype="File" /></p>
+
+  <!-- ===== RUBRIC ===== -->
+  <h2><strong>Rubric (25 points)</strong></h2>
+  <p>Each criterion is worth up to <strong>5 points</strong>.</p>
+
+  <table style="border-collapse: collapse; width: 100%;" border="1">
+    <tbody>
+      <tr>
+        <th>Criterion</th>
+        <th>5 - Excellent</th>
+        <th>3 - Satisfactory</th>
+        <th>1 - Attempted</th>
+        <th>0 - Missing</th>
+      </tr>
+      <tr>
+        <td><strong>1) Ideas - Environment Variables &amp; Secrets (5)</strong></td>
+        <td>Clearly explains what an environment variable is and why secrets belong in
+          <code>.env.development</code>; correctly explains the <code>NEXT_PUBLIC_</code>
+          prefix and why it must not be used for secret keys; accurately states what to
+          do if a secret key is accidentally committed to a public repo</td>
+        <td>Mostly correct with minor gaps; at least two of the three sub-questions
+          answered clearly</td>
+        <td>Some understanding shown but at least one concept is significantly wrong
+          or missing</td>
+        <td>Missing or entirely incorrect</td>
+      </tr>
+      <tr>
+        <td><strong>2) Ideas - Stripe Checkout Flow &amp; Webhooks (5)</strong></td>
+        <td>Correctly explains test vs live mode and that the test card charges nothing;
+          accurately describes what <code>sk_test_</code> vs <code>sk_live_</code> means;
+          identifies what the create-session route returns and what the browser does;
+          explains why polling is more reliable than a single check; correctly describes
+          what the webhook event triggers and what <code>constructEvent</code> verifies</td>
+        <td>Mostly correct; covers most sub-questions but one or two answers are
+          incomplete or slightly inaccurate</td>
+        <td>Shows partial understanding but several sub-questions are missing or
+          contain significant errors</td>
+        <td>Missing or not attempted</td>
+      </tr>
+      <tr>
+        <td><strong>3) Connections - Setup, Credentials &amp; App Running (5)</strong></td>
+        <td>Screenshot of <code>.env.stripe.test</code>; correct answers about the
+          <code>NEXT_PUBLIC_</code> prefix and why committing a test key to a private
+          repo is acceptable; screenshot of product in cart with explanation of where
+          cart state is stored</td>
+        <td>Screenshots present and app running; one answer incomplete or explanation
+          of cart storage is vague</td>
+        <td>Some evidence provided (e.g. only one screenshot) or answers are missing;
+          app may not be fully configured</td>
+        <td>Not attempted or credentials not configured</td>
+      </tr>
+      <tr>
+        <td><strong>4) Connections - End-to-End Checkout &amp; Order Confirmed (5)</strong></td>
+        <td>Screenshot of Stripe checkout page with test card entered; screenshot of
+          success page showing "Payment confirmed!" with order summary; screenshot of
+          order document in Firebase Emulator; correct answers about the Network tab
+          polling URL, whether confirm-session reads from Stripe or Firestore, and the
+          order's initial status</td>
+        <td>All three screenshots present; app flow completed successfully; one or two
+          written answers are incomplete</td>
+        <td>Checkout partially completed or one screenshot is missing; explanations
+          are sparse</td>
+        <td>Not attempted or checkout did not complete</td>
+      </tr>
+      <tr>
+        <td><strong>5) Extensions - Part C Code Changes + Git (5)</strong></td>
+        <td>Both code changes made correctly; screenshot of success page showing
+          "Customer email" field with an actual email address; correct answers about
+          the API/UI contract and where <code>customer_email</code> comes from;
+          work committed and pushed without <code>.env.development</code></td>
+        <td>Both changes made and working; screenshot present; one written answer
+          incomplete; push succeeds</td>
+        <td>One change made but not the other, or changes present but not working;
+          partial screenshot; push may be missing</td>
+        <td>Not attempted or no push</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p><strong>Total: 25 points</strong></p>
+
+</div>
+</body>
+</html>

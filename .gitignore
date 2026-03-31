@@ -25,6 +25,7 @@ build
 # environment variables
 .env*
 .env~
+!.env.stripe.test
 .env
 .env.local
 .env.development.local
