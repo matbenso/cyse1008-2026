@@ -7,7 +7,7 @@ export async function GET() {
   try {
     console.log("[GET /api/assignment5] handler called");
     return NextResponse.json({
-      message: "Hello from the Black River Market API",
+      message: "Hello from the Black River Market API part 2",
       method: "GET",
       timestamp: new Date().toISOString(),
     });
