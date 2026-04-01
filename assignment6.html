@@ -69,18 +69,88 @@ git reset --hard upstream/feature/assignmentFinal</code></pre>
     <h3 style="color: #8b1e41;"><strong>3) Create your working branch</strong></h3>
     <pre><code class="language-bash">git checkout -b feature/assignmentFinal</code></pre>
 
-    <h3 style="color: #8b1e41;"><strong>4) Stripe credentials</strong></h3>
-    <p>The repo includes a file called <code>.env.stripe.test</code> that contains
-      Stripe <strong>test-mode</strong> credentials. The dev server loads it automatically
-      — you do not need to copy or edit anything to get started.</p>
-    <p>If you prefer to use your own free Stripe account instead, go to
-      <a href="https://stripe.com" target="_blank">stripe.com</a>, sign up (no credit card
-      required), switch to <strong>Test mode</strong> in the top-right corner, and copy
-      your secret key from <strong>Developers &rarr; API keys</strong>. Add it to your
-      <code>.env.development</code> file as <code>STRIPE_SECRET_KEY=sk_test_...</code>
-      and it will override the shared key.</p>
+    <h3 style="color: #8b1e41;"><strong>4) Create a Stripe account and get your API key</strong></h3>
+    <p>Each student needs their own free Stripe developer account. No business information
+      or credit card is required — you will only ever use <strong>test mode</strong>.</p>
+    <ol>
+      <li>Go to <a href="https://stripe.com" target="_blank">stripe.com</a> and click
+        <strong>Sign in</strong> &rarr; <strong>Create account</strong>. Use your school
+        email address.</li>
+      <li>After signing up, Stripe may offer to create a <strong>sandbox</strong>. Accept
+        this — a sandbox is a fully isolated test environment. If it does not offer one,
+        that is fine; the default test mode works identically.</li>
+      <li>Once you are in the Stripe dashboard, look at the top-right corner. Make sure
+        the toggle shows <strong>Test mode</strong> (not Live mode). The toggle looks like
+        a switch labelled "Test mode". If it is off, click it to turn it on. Your dashboard
+        header should change colour to indicate you are in test mode.</li>
+      <li>In the left sidebar, click <strong>Developers</strong>, then click
+        <strong>API keys</strong>.</li>
+      <li>You will see a <strong>Secret key</strong> that starts with
+        <code>sk_test_</code>. Click <strong>Reveal test key</strong> to show the full
+        value, then copy it.</li>
+      <li>Open your <code>.env.development</code> file in the project root and add this
+        line (paste your own key after the equals sign):
+        <pre><code>STRIPE_SECRET_KEY=sk_test_paste_your_key_here</code></pre>
+        Save the file.</li>
+    </ol>
+    <p><strong>Note:</strong> <code>.env.development</code> is listed in
+      <code>.gitignore</code> and will never be committed to Git. Your key stays on your
+      machine only.</p>
 
-    <h3 style="color: #8b1e41;"><strong>5) Start the app and emulators</strong></h3>
+    <h3 style="color: #8b1e41;"><strong>5) Set up Stripe webhooks with the VS Code extension</strong></h3>
+    <p>A <strong>webhook</strong> is how Stripe notifies your app that a payment completed.
+      When running locally, Stripe cannot reach your machine directly — the Stripe VS Code
+      extension solves this by forwarding webhook events from Stripe's servers to your
+      local dev server in real time.</p>
+    <p><strong>Install the extension:</strong></p>
+    <ol>
+      <li>Open VS Code. Click the <strong>Extensions</strong> icon in the left sidebar
+        (or press <code>Ctrl+Shift+X</code>).</li>
+      <li>Search for <strong>Stripe</strong> and install the extension published by
+        <strong>Stripe</strong>.</li>
+      <li>After it installs you will see a new <strong>Stripe logo</strong> (looks like an
+        S) appear in the left sidebar. Click it.</li>
+      <li>The Stripe panel will open and ask you to sign in. Click
+        <strong>Sign in with GitHub</strong> (or email) and follow the prompts in your
+        browser. Return to VS Code once authorised.</li>
+    </ol>
+    <p><strong>Start the webhook forwarder:</strong></p>
+    <ol>
+      <li>In VS Code, open the <strong>Run and Debug</strong> panel by pressing
+        <code>Ctrl+Shift+D</code> (or clicking the play-with-bug icon in the left
+        sidebar).</li>
+      <li>At the top of the panel you will see a dropdown that says something like
+        <strong>"No Configurations"</strong>. Click it and select
+        <strong>"Stripe: Forward webhooks"</strong> from the list. This option comes from
+        the <code>.vscode/launch.json</code> file already included in the project.</li>
+      <li>Click the green <strong>play button</strong> next to the dropdown.</li>
+      <li>A terminal panel will open at the bottom of VS Code. After a few seconds you
+        should see output that includes a line like:
+        <pre><code>&gt; Ready! Your webhook signing secret is whsec_abc123...</code></pre>
+        If you do not see this line, scroll up in the terminal — it appears near the top
+        of the output when the forwarder starts. <em>Your secret will be different from
+        the example above.</em></li>
+      <li>Copy the full <code>whsec_...</code> value.</li>
+      <li>Open your <code>.env.development</code> file again and add this line:
+        <pre><code>STRIPE_WEBHOOK_SECRET=whsec_paste_your_secret_here</code></pre>
+        Save the file.</li>
+    </ol>
+    <p><strong>Important:</strong> The webhook secret changes every time you restart the
+      forwarder. If you stop and restart the Stripe extension, you will need to copy the
+      new secret and update <code>.env.development</code> again, then restart the dev
+      server.</p>
+    <p><strong>Troubleshooting:</strong></p>
+    <ul>
+      <li>If the extension says <em>"Stripe CLI not found"</em>, you or your instructor
+        may need to install the Stripe CLI separately. Ask for help.</li>
+      <li>If the Run and Debug dropdown does not show <strong>"Stripe: Forward webhooks"</strong>,
+        make sure you have fetched the latest code from upstream — the
+        <code>.vscode/launch.json</code> file needs to be present in your project root.</li>
+      <li>If you see <em>"No configurations"</em> even after fetching, check that
+        <code>.vscode</code> is not in your <code>.gitignore</code>.</li>
+    </ul>
+
+    <h3 style="color: #8b1e41;"><strong>6) Start the app and emulators</strong></h3>
     <p>You need <strong>both</strong> the dev server and the Firebase emulators running for this assignment.</p>
     <p>In one terminal:</p>
     <pre><code class="language-bash">npm run dev</code></pre>
@@ -179,28 +249,34 @@ git reset --hard upstream/feature/assignmentFinal</code></pre>
 
     <!-- Step 1 -->
     <h4><strong>Step 1 - Verify Stripe credentials are loaded</strong></h4>
-    <p>After fetching from upstream, your repo already contains a file called
-      <code>.env.stripe.test</code>. The dev server loads it automatically alongside
-      your <code>.env.development</code> — <strong>no copy or edit is needed</strong>
-      to use the shared test credentials.</p>
-    <p>Open <code>.env.stripe.test</code> in the project root and read it. You will see
-      two variables:</p>
-    <pre><code>STRIPE_SECRET_KEY=sk_test_...
-NEXT_PUBLIC_SITE_URL=http://localhost:3032</code></pre>
-    <p>Note that <code>.env.stripe.test</code> is committed to the repo but
-      <code>.env.development</code> is not — check <code>.gitignore</code> to see why.</p>
+    <p>Before continuing, confirm you have completed Setup steps 4 and 5:</p>
+    <ul>
+      <li>Your <code>.env.development</code> contains <code>STRIPE_SECRET_KEY=sk_test_...</code>
+        (your own key from the Stripe dashboard)</li>
+      <li>Your <code>.env.development</code> contains <code>STRIPE_WEBHOOK_SECRET=whsec_...</code>
+        (the secret printed by the Stripe VS Code extension forwarder)</li>
+      <li>The Stripe webhook forwarder is running in VS Code (Run and Debug &rarr;
+        "Stripe: Forward webhooks")</li>
+      <li>The dev server has been restarted after you saved <code>.env.development</code></li>
+    </ul>
+    <p>Open <code>.env.stripe.test</code> in the project root and read it. This file is
+      committed to the repo and loaded automatically by <code>npm run dev</code>. It sets
+      <code>NEXT_PUBLIC_SITE_URL</code> so that Stripe knows where to redirect after
+      payment. Notice it does <strong>not</strong> contain a secret key — each student
+      provides their own via <code>.env.development</code>.</p>
 
     <p><strong>To earn Excellent on this step:</strong></p>
     <ul>
-      <li>Screenshot <code>.env.stripe.test</code> showing the two variables
-        (you may blur the key value)</li>
+      <li>Screenshot your <code>.env.development</code> showing both
+        <code>STRIPE_SECRET_KEY</code> and <code>STRIPE_WEBHOOK_SECRET</code> are set
+        (blur or redact the actual values)</li>
       <li>Answer: <code>NEXT_PUBLIC_SITE_URL</code> uses the <code>NEXT_PUBLIC_</code>
         prefix but <code>STRIPE_SECRET_KEY</code> does not. What is the practical
         difference between these two variables in terms of where their values end up
         (server only vs. also sent to the browser)?</li>
-      <li>Answer: <code>.env.stripe.test</code> is committed to this private repo even
-        though it contains a secret key. Why is this acceptable here but would be a
-        serious problem on a public repo or with a live key?</li>
+      <li>Answer: <code>.env.development</code> is not committed to Git but
+        <code>.env.stripe.test</code> is. Why is it safe to commit
+        <code>.env.stripe.test</code> in this project but not <code>.env.development</code>?</li>
     </ul>
 
     <!-- Step 2 -->
@@ -289,10 +365,17 @@ NEXT_PUBLIC_SITE_URL=http://localhost:3032</code></pre>
       <li>Screenshot the order document in the Emulator UI, with fields such as
         <code>status</code>, <code>total</code>, <code>email</code>, and
         <code>items</code> visible</li>
-      <li>Answer: the order was created with <code>status: "pending"</code> before
-        the browser was redirected to Stripe. Without the webhook running locally,
-        does the document show <code>"pending"</code> or <code>"paid"</code>?
-        What would need to happen for the status to change to <code>"paid"</code>?</li>
+      <li>Answer: the order document was created with <code>status: "pending"</code>
+        <em>before</em> the browser was redirected to Stripe. After payment completed,
+        the Stripe VS Code extension forwarded a webhook event to
+        <code>/api/stripe/webhook</code> which updated the status to
+        <code>"paid"</code>. In your own words, explain why the order is created
+        <em>before</em> the payment rather than after. What could go wrong if it were
+        created after?</li>
+      <li>Answer: open the Stripe extension panel in VS Code (the S icon in the
+        sidebar) and look at the <strong>Events</strong> section. You should see a
+        <code>checkout.session.completed</code> event listed. What does this event
+        tell you, and which file in the project handles it?</li>
       <li>Answer: find the <code>items</code> array inside the order document.
         What information is stored for each item in the array?</li>
     </ul>
@@ -420,13 +503,24 @@ git push origin HEAD</code></pre>
       <li>Firebase emulators not running (orders collection will be empty)</li>
       <li>Wrong key used (live key instead of test key)</li>
       <li><code>NEXT_PUBLIC_SITE_URL</code> missing (success redirect will fail)</li>
+      <li>Stripe webhook forwarder not running — open Run and Debug
+        (<code>Ctrl+Shift+D</code>) and start <strong>"Stripe: Forward webhooks"</strong>
+        before testing checkout</li>
+      <li><code>STRIPE_WEBHOOK_SECRET</code> missing or stale — if you restarted the
+        forwarder, copy the new <code>whsec_...</code> secret from the terminal output
+        and update <code>.env.development</code>, then restart the dev server</li>
+      <li>Order stuck at <code>"pending"</code> in Firestore — this usually means the
+        webhook did not fire. Check that both the forwarder is running and the webhook
+        secret in <code>.env.development</code> matches what the forwarder printed</li>
     </ul>
 
     <h3 style="color: #8b1e41;"><strong>Submission</strong></h3>
     <ul>
       <li>GitHub repository URL (your <code>feature/assignmentFinal</code> branch)</li>
       <li>Part A written answers (all four questions)</li>
-      <li>Screenshot: <code>.env.development</code> with key value blurred/redacted</li>
+      <li>Screenshot: <code>.env.development</code> showing both
+        <code>STRIPE_SECRET_KEY</code> and <code>STRIPE_WEBHOOK_SECRET</code> set
+        (values blurred/redacted)</li>
       <li>Screenshot: product added to cart</li>
       <li>Screenshot: Stripe-hosted checkout page with test card entered
         (before clicking Pay)</li>
