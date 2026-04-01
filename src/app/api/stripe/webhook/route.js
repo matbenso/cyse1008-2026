@@ -1,18 +1,16 @@
 import Stripe from 'stripe';
 import { NextResponse } from 'next/server';
-import { getAdmin, getDb } from 'src/lib/firebase/firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
+import { getDb } from 'src/lib/firebase/firebase-admin';
 
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const secret = process.env.STRIPE_WEBHOOK_SECRET;
 
-// Required to read the raw body in App Router route handlers:
-export const config = { api: { bodyParser: false } };
-
 export async function POST(req) {
   try {
-    const admin = getAdmin();
     const db = getDb();
 
     const sig = req.headers.get('stripe-signature');
@@ -35,7 +33,7 @@ export async function POST(req) {
       if (orderId) {
         await db.collection('orders').doc(orderId).update({
           status: 'paid',
-          paidAt: admin.firestore.FieldValue.serverTimestamp(),
+          paidAt: FieldValue.serverTimestamp(),
           stripeSessionId: session.id,
         });
       }

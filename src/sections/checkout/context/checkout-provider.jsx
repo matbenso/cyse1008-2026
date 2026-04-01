@@ -84,11 +84,6 @@ function Container({ children }) {
     updateTotalField();
   }, [state.items, state.discount, state.shipping, updateTotalField]);
 
-  // Clear any stale cart persisted before the cleanup (removes old $1 demo items)
-  useEffect(() => {
-    resetState();
-  }, [resetState]);
-
   const initialStep = useCallback(() => {
     if (!activeStep) {
       const href = createUrl('go', 0);

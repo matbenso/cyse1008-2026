@@ -135,7 +135,7 @@ export function ProductDetailsSummary({
 
   const renderPrice = (
     <Box sx={{ typography: 'h5' }}>
-      {priceSale && (
+      {priceSale > 0 && (
         <Box
           component="span"
           sx={{ color: 'text.disabled', textDecoration: 'line-through', mr: 0.5 }}
