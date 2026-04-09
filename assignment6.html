@@ -112,28 +112,38 @@ git reset --hard upstream/feature/assignmentFinal</code></pre>
         really came from Stripe and not from someone else.</li>
     </ul>
 
-    <p><strong>Install the extension:</strong></p>
+    <p>There are two ways to start the forwarder — <strong>Option A</strong> uses the VS Code
+      extension (recommended), <strong>Option B</strong> uses the terminal directly (simpler
+      if the extension gives you trouble). Both produce the same webhook secret. Pick one.</p>
+
+    <hr />
+    <p><strong>Option A — VS Code Stripe extension</strong></p>
+
+    <p><em>Step A1: Install the extension</em></p>
     <ol>
-      <li>Open VS Code. Click the <strong>Extensions</strong> icon in the left sidebar
-        (or press <code>Ctrl+Shift+X</code>).</li>
+      <li>Open VS Code. Press
+        <code>Ctrl+Shift+X</code> (Windows/Linux) or <code>Cmd+Shift+X</code> (Mac)
+        to open the Extensions panel.</li>
       <li>Search for <strong>Stripe</strong> and install the extension published by
-        <strong>Stripe</strong>.</li>
-      <li>After it installs you will see a new <strong>Stripe logo</strong> (looks like an
-        S) appear in the left sidebar. Click it.</li>
-      <li>The Stripe panel will open and ask you to sign in. Click
-        <strong>Sign in with GitHub</strong> (or email) and follow the prompts in your
-        browser. Return to VS Code once authorised.</li>
+        <strong>Stripe</strong> (the one with the S logo).</li>
+      <li>After it installs, a new <strong>Stripe S icon</strong> appears in the left
+        sidebar. Click it to open the Stripe panel.</li>
+      <li>Click <strong>Sign in</strong> and choose GitHub or email. Your browser will
+        open — follow the prompts and return to VS Code once authorised.</li>
     </ol>
 
-    <p><strong>Create the launch configuration file:</strong></p>
-    <p>The project includes a <code>.vscode/launch.json</code> file that configures the
-      webhook forwarder. If it is not present in your project (check by looking for a
-      <code>.vscode</code> folder in the project root), create it now:</p>
+    <p><em>Step A2: Check (or create) the launch configuration file</em></p>
+    <p>The project includes a <code>.vscode/launch.json</code> file that tells the extension
+      which URL to forward webhooks to. After fetching the latest code from upstream it
+      should already be there. To confirm: look in the project root for a folder named
+      <code>.vscode</code> containing a file named <code>launch.json</code>.</p>
+    <p>If the file is missing, create it now:</p>
     <ol>
-      <li>In the project root, create a folder called <code>.vscode</code> if it does not
-        exist.</li>
-      <li>Inside that folder, create a file called <code>launch.json</code> with exactly
-        this content:
+      <li>In the project root, create a folder named <code>.vscode</code> (if it does not
+        exist).</li>
+      <li>Inside it, create <code>launch.json</code> with exactly this content — the
+        <code>forwardTo</code> URL must match the port your dev server runs on
+        (<code>3032</code>):
         <pre><code>{
   "version": "0.2.0",
   "configurations": [
@@ -150,49 +160,87 @@ git reset --hard upstream/feature/assignmentFinal</code></pre>
       <li>Save the file.</li>
     </ol>
 
-    <p><strong>Start the webhook forwarder:</strong></p>
+    <p><em>Step A3: Start the forwarder</em></p>
     <ol>
-      <li>In VS Code, open the <strong>Run and Debug</strong> panel by pressing
-        <code>Ctrl+Shift+D</code> (or clicking the play-with-bug icon in the left
-        sidebar).</li>
-      <li>At the top of the panel you will see a dropdown. Click it and select
-        <strong>"Stripe: Forward webhooks"</strong> from the list.</li>
-      <li>Click the green <strong>play button</strong> next to the dropdown.</li>
-      <li>A terminal panel will open at the bottom of VS Code. After a few seconds you
-        should see output that includes a line like:
+      <li>Open the <strong>Run and Debug</strong> panel:
+        <ul>
+          <li><strong>Windows/Linux:</strong> press <code>Ctrl+Shift+D</code></li>
+          <li><strong>Mac:</strong> press <code>Cmd+Shift+D</code></li>
+          <li>Or click the <strong>play icon with a small bug</strong> in the left
+            sidebar (it looks like ▷ with a beetle).</li>
+        </ul>
+      </li>
+      <li>At the very top of the Run and Debug panel there is a dropdown (it may say
+        <em>"No Configurations"</em> or the name of a previous config). Click that
+        dropdown and choose <strong>"Stripe: Forward webhooks"</strong>.</li>
+      <li>Click the <strong>green play ▶ button</strong> to the left of the dropdown.</li>
+      <li>A <strong>DEBUG CONSOLE</strong> or terminal tab opens at the bottom of VS Code.
+        After a few seconds you will see a line like:
         <pre><code>&gt; Ready! Your webhook signing secret is whsec_abc123...</code></pre>
-        If you do not see this line, scroll up in the terminal — it appears near the top
-        of the output when the forwarder starts. <em>Your secret will be different from
-        the example above.</em></li>
-      <li>Copy the full <code>whsec_...</code> value.</li>
-      <li>Open your <code>.env.development</code> file and add this line:
+        Scroll up if you do not see it immediately — it prints near the top when the
+        forwarder starts.</li>
+      <li>Copy the full <code>whsec_...</code> value and continue to
+        <strong>Step C</strong> below.</li>
+    </ol>
+
+    <hr />
+    <p><strong>Option B — Terminal (no extension needed)</strong></p>
+    <ol>
+      <li>Open a new terminal in VS Code
+        (<code>Ctrl+`</code> or <code>Cmd+`</code> on Mac, or
+        <strong>Terminal → New Terminal</strong> from the menu).</li>
+      <li>Log in to Stripe CLI (only needed the first time):
+        <pre><code>stripe login</code></pre>
+        A browser window will open — authorise it and return to the terminal.
+      </li>
+      <li>Start the forwarder. Make sure the port matches your dev server
+        (<code>3032</code>):
+        <pre><code>stripe listen --forward-to http://localhost:3032/api/stripe/webhook</code></pre>
+      </li>
+      <li>After a few seconds you will see:
+        <pre><code>&gt; Ready! Your webhook signing secret is whsec_abc123...</code></pre>
+        Copy the full <code>whsec_...</code> value.</li>
+      <li>Leave this terminal running — closing it stops the forwarder.</li>
+    </ol>
+
+    <hr />
+    <p><strong>Step C — Add the webhook secret to your environment</strong></p>
+    <ol>
+      <li>Open <code>.env.development</code> in the project root.</li>
+      <li>Add this line (paste your own <code>whsec_...</code> value):
         <pre><code>STRIPE_WEBHOOK_SECRET=whsec_paste_your_secret_here</code></pre>
-        Save the file. Your <code>.env.development</code> should now have both keys:
+      </li>
+      <li>Save the file. It should now contain both keys:
         <pre><code>STRIPE_SECRET_KEY=sk_test_...
 STRIPE_WEBHOOK_SECRET=whsec_...</code></pre>
       </li>
-      <li>Restart the dev server (<code>npm run dev</code>) so it picks up the new secret.</li>
+      <li>Restart the dev server (<code>npm run dev</code>) so it picks up the new value.</li>
     </ol>
 
-    <p><strong>Important:</strong> The webhook secret changes every time you restart the
-      forwarder. If you stop and restart it, copy the new secret into
-      <code>.env.development</code> and restart the dev server again.</p>
+    <p><strong>Important:</strong> The <code>whsec_...</code> secret is tied to the current
+      forwarder session — it changes every time you restart it. If you stop and restart the
+      forwarder, copy the new secret into <code>.env.development</code> and restart the dev
+      server.</p>
 
     <p><strong>Troubleshooting:</strong></p>
     <ul>
-      <li>If the extension says <em>"Stripe CLI not found"</em>, the Stripe CLI needs to
-        be installed. Run this in the terminal:
+      <li><strong>"Stripe CLI not found"</strong> — the Stripe CLI is not installed.
+        On Linux/WSL run:
         <pre><code>curl -s https://packages.stripe.dev/api/security/keypair/stripe-cli-gpg/public | gpg --dearmor | sudo tee /usr/share/keyrings/stripe.gpg > /dev/null
 echo "deb [signed-by=/usr/share/keyrings/stripe.gpg] https://packages.stripe.dev/stripe-cli-debian-local stable main" | sudo tee /etc/apt/sources.list.d/stripe.list
 sudo apt update && sudo apt install stripe</code></pre>
+        On Mac with Homebrew: <code>brew install stripe/stripe-cli/stripe</code><br/>
         Then restart VS Code and try again.</li>
-      <li>If the Run and Debug dropdown is empty or shows <em>"No Configurations"</em>,
-        the <code>.vscode/launch.json</code> file is missing — follow the "Create the
-        launch configuration file" steps above.</li>
-      <li>If the forwarder starts but the terminal shows
-        <em>"Webhook signature verification failed"</em>, your
+      <li><strong>Run and Debug dropdown is empty / "No Configurations"</strong> — the
+        <code>.vscode/launch.json</code> file is missing. Follow Step A2 above to create
+        it, or use Option B (terminal) instead.</li>
+      <li><strong>"Webhook signature verification failed"</strong> — the
         <code>STRIPE_WEBHOOK_SECRET</code> in <code>.env.development</code> does not match
-        the secret the forwarder printed. Copy it again and restart the dev server.</li>
+        what the forwarder printed. Copy it again carefully and restart the dev server.</li>
+      <li><strong>Order stays Pending after payment</strong> — the webhook did not reach
+        your app. Check that the forwarder is still running (terminal or Run and Debug
+        panel), and that you restarted the dev server after saving
+        <code>.env.development</code>.</li>
     </ul>
 
     <h3 style="color: #8b1e41;"><strong>6) Start the app and emulators</strong></h3>
