@@ -65,6 +65,7 @@ export default function CheckoutSuccessPage() {
         const data = await resp.json();
         if (cancelled) return;
         if (data.paid) {
+          localStorage.removeItem('app-checkout');
           setState({ phase: "ok", msg: "Payment confirmed!", result: data });
           return;
         }

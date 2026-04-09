@@ -22,7 +22,7 @@ export function CheckoutBillingAddress() {
   return (
     <>
       <Grid container spacing={3}>
-        <Grid xs={12} md={8}>
+        <Grid size={{ xs: 12, md: 8 }}>
           {savedAddresses.length > 0 &&
             savedAddresses.map((address) => (
               <AddressItem
@@ -75,7 +75,7 @@ export function CheckoutBillingAddress() {
           </Stack>
         </Grid>
 
-        <Grid xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <CheckoutSummary
             total={checkout.total}
             subtotal={checkout.subtotal}

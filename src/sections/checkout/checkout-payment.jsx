@@ -193,7 +193,7 @@ export function CheckoutPayment() {
     <>
       <Form methods={methods} onSubmit={onSubmit}>
         <Grid container spacing={3}>
-          <Grid xs={12} md={8}>
+          <Grid size={{ xs: 12, md: 8 }}>
             <CheckoutDelivery
               name="delivery"
               onApplyShipping={checkout.onApplyShipping}
@@ -219,7 +219,7 @@ export function CheckoutPayment() {
           </Button>
         </Grid>
 
-        <Grid xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <CheckoutBillingInfo billing={checkout.billing} onBackStep={checkout.onBackStep} />
 
           <CheckoutSummary
