@@ -38,7 +38,8 @@ keys
 .DS_Store
 .vercel
 .netlify
-.vscode
+.vscode/*
+!.vscode/launch.json
 .eslintcache
 .unimportedrc.json
 tsconfig.tsbuildinfo
@@ -58,6 +59,7 @@ keys/
 *.key
 *.json
 !package.json
+!.vscode/launch.json
 
 # Firebase emulator exports
 .firebase-data/

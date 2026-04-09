@@ -1,0 +1,18 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Stripe: Forward webhooks",
+      "type": "stripe",
+      "request": "launch",
+      "command": "listen",
+      "forwardTo": "http://localhost:3032/api/stripe/webhook"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Dev: App + Stripe webhooks",
+      "configurations": ["Stripe: Forward webhooks"]
+    }
+  ]
+}

@@ -102,6 +102,16 @@ git reset --hard upstream/feature/assignmentFinal</code></pre>
       When running locally, Stripe cannot reach your machine directly — the Stripe VS Code
       extension solves this by forwarding webhook events from Stripe's servers to your
       local dev server in real time.</p>
+
+    <p><strong>You will end up with two Stripe keys in your <code>.env.development</code>:</strong></p>
+    <ul>
+      <li><code>STRIPE_SECRET_KEY</code> — copied from the Stripe dashboard (step 4 above).
+        This authenticates your app with Stripe's API.</li>
+      <li><code>STRIPE_WEBHOOK_SECRET</code> — generated locally when you start the webhook
+        forwarder (this step). This lets your app verify that incoming webhook events
+        really came from Stripe and not from someone else.</li>
+    </ul>
+
     <p><strong>Install the extension:</strong></p>
     <ol>
       <li>Open VS Code. Click the <strong>Extensions</strong> icon in the left sidebar
@@ -114,15 +124,39 @@ git reset --hard upstream/feature/assignmentFinal</code></pre>
         <strong>Sign in with GitHub</strong> (or email) and follow the prompts in your
         browser. Return to VS Code once authorised.</li>
     </ol>
+
+    <p><strong>Create the launch configuration file:</strong></p>
+    <p>The project includes a <code>.vscode/launch.json</code> file that configures the
+      webhook forwarder. If it is not present in your project (check by looking for a
+      <code>.vscode</code> folder in the project root), create it now:</p>
+    <ol>
+      <li>In the project root, create a folder called <code>.vscode</code> if it does not
+        exist.</li>
+      <li>Inside that folder, create a file called <code>launch.json</code> with exactly
+        this content:
+        <pre><code>{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Stripe: Forward webhooks",
+      "type": "stripe",
+      "request": "launch",
+      "command": "listen",
+      "forwardTo": "http://localhost:3032/api/stripe/webhook"
+    }
+  ]
+}</code></pre>
+      </li>
+      <li>Save the file.</li>
+    </ol>
+
     <p><strong>Start the webhook forwarder:</strong></p>
     <ol>
       <li>In VS Code, open the <strong>Run and Debug</strong> panel by pressing
         <code>Ctrl+Shift+D</code> (or clicking the play-with-bug icon in the left
         sidebar).</li>
-      <li>At the top of the panel you will see a dropdown that says something like
-        <strong>"No Configurations"</strong>. Click it and select
-        <strong>"Stripe: Forward webhooks"</strong> from the list. This option comes from
-        the <code>.vscode/launch.json</code> file already included in the project.</li>
+      <li>At the top of the panel you will see a dropdown. Click it and select
+        <strong>"Stripe: Forward webhooks"</strong> from the list.</li>
       <li>Click the green <strong>play button</strong> next to the dropdown.</li>
       <li>A terminal panel will open at the bottom of VS Code. After a few seconds you
         should see output that includes a line like:
@@ -131,23 +165,34 @@ git reset --hard upstream/feature/assignmentFinal</code></pre>
         of the output when the forwarder starts. <em>Your secret will be different from
         the example above.</em></li>
       <li>Copy the full <code>whsec_...</code> value.</li>
-      <li>Open your <code>.env.development</code> file again and add this line:
+      <li>Open your <code>.env.development</code> file and add this line:
         <pre><code>STRIPE_WEBHOOK_SECRET=whsec_paste_your_secret_here</code></pre>
-        Save the file.</li>
+        Save the file. Your <code>.env.development</code> should now have both keys:
+        <pre><code>STRIPE_SECRET_KEY=sk_test_...
+STRIPE_WEBHOOK_SECRET=whsec_...</code></pre>
+      </li>
+      <li>Restart the dev server (<code>npm run dev</code>) so it picks up the new secret.</li>
     </ol>
+
     <p><strong>Important:</strong> The webhook secret changes every time you restart the
-      forwarder. If you stop and restart the Stripe extension, you will need to copy the
-      new secret and update <code>.env.development</code> again, then restart the dev
-      server.</p>
+      forwarder. If you stop and restart it, copy the new secret into
+      <code>.env.development</code> and restart the dev server again.</p>
+
     <p><strong>Troubleshooting:</strong></p>
     <ul>
-      <li>If the extension says <em>"Stripe CLI not found"</em>, you or your instructor
-        may need to install the Stripe CLI separately. Ask for help.</li>
-      <li>If the Run and Debug dropdown does not show <strong>"Stripe: Forward webhooks"</strong>,
-        make sure you have fetched the latest code from upstream — the
-        <code>.vscode/launch.json</code> file needs to be present in your project root.</li>
-      <li>If you see <em>"No configurations"</em> even after fetching, check that
-        <code>.vscode</code> is not in your <code>.gitignore</code>.</li>
+      <li>If the extension says <em>"Stripe CLI not found"</em>, the Stripe CLI needs to
+        be installed. Run this in the terminal:
+        <pre><code>curl -s https://packages.stripe.dev/api/security/keypair/stripe-cli-gpg/public | gpg --dearmor | sudo tee /usr/share/keyrings/stripe.gpg > /dev/null
+echo "deb [signed-by=/usr/share/keyrings/stripe.gpg] https://packages.stripe.dev/stripe-cli-debian-local stable main" | sudo tee /etc/apt/sources.list.d/stripe.list
+sudo apt update && sudo apt install stripe</code></pre>
+        Then restart VS Code and try again.</li>
+      <li>If the Run and Debug dropdown is empty or shows <em>"No Configurations"</em>,
+        the <code>.vscode/launch.json</code> file is missing — follow the "Create the
+        launch configuration file" steps above.</li>
+      <li>If the forwarder starts but the terminal shows
+        <em>"Webhook signature verification failed"</em>, your
+        <code>STRIPE_WEBHOOK_SECRET</code> in <code>.env.development</code> does not match
+        the secret the forwarder printed. Copy it again and restart the dev server.</li>
     </ul>
 
     <h3 style="color: #8b1e41;"><strong>6) Start the app and emulators</strong></h3>
