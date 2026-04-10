@@ -482,21 +482,28 @@ sudo apt update && sudo apt install stripe</code></pre>
 
     <h4><strong>Change 1 - Backend: add <code>customer_email</code> to the API response</strong></h4>
     <p>Open <code>src/app/api/stripe/confirm-session/route.js</code>.</p>
-    <p>Find the <code>return NextResponse.json({...})</code> call. It currently returns
-      these fields:</p>
-    <pre><code class="language-js">return NextResponse.json({
+    <p>This route has <strong>two separate</strong> <code>return NextResponse.json({...})</code>
+      calls — one for when Stripe has not yet confirmed payment (<code>paid: false</code>,
+      around line&nbsp;32) and one for when payment is confirmed (<code>paid: true</code>,
+      around line&nbsp;62). You need to add <code>customer_email</code> to
+      <strong>both</strong>.</p>
+
+    <p><strong>First return</strong> (around line&nbsp;32 — payment not yet confirmed):</p>
+    <pre><code class="language-js">// Before
+return NextResponse.json({
   ok: true,
-  paid,
+  paid: false,
   status: session.status,
   payment_status: session.payment_status,
   amount_total: session.amount_total,
   currency: session.currency,
   orderId: session.metadata?.orderId ?? null,
-});</code></pre>
-    <p>Add <strong>one line</strong> after the <code>orderId</code> line:</p>
-    <pre><code class="language-js">return NextResponse.json({
+});
+
+// After
+return NextResponse.json({
   ok: true,
-  paid,
+  paid: false,
   status: session.status,
   payment_status: session.payment_status,
   amount_total: session.amount_total,
@@ -504,6 +511,34 @@ sudo apt update && sudo apt install stripe</code></pre>
   orderId: session.metadata?.orderId ?? null,
   customer_email: session.customer_email ?? null,
 });</code></pre>
+
+    <p><strong>Second return</strong> (around line&nbsp;62 — payment confirmed):</p>
+    <pre><code class="language-js">// Before
+return NextResponse.json({
+  ok: true,
+  paid: true,
+  status: session.status,
+  payment_status: session.payment_status,
+  amount_total: session.amount_total,
+  currency: session.currency,
+  orderId,
+});
+
+// After
+return NextResponse.json({
+  ok: true,
+  paid: true,
+  status: session.status,
+  payment_status: session.payment_status,
+  amount_total: session.amount_total,
+  currency: session.currency,
+  customer_email: session.customer_email ?? session.customer_details?.email ?? null,
+  orderId,
+});</code></pre>
+    <p>The second return uses <code>session.customer_details?.email</code> as a fallback
+      because Stripe populates <code>customer_email</code> only when an email was passed
+      when creating the session; <code>customer_details.email</code> is always filled in
+      once the customer completes the Stripe checkout form.</p>
 
     <h4><strong>Change 2 - Frontend: display the email on the success page</strong></h4>
     <p>Open <code>src/app/checkout/success/page.jsx</code>.</p>

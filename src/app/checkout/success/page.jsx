@@ -14,6 +14,7 @@ import Alert from "@mui/material/Alert";
 import CircularProgress from "@mui/material/CircularProgress";
 
 import { paths } from "src/routes/paths";
+import { useCheckoutContext } from "src/sections/checkout/context";
 
 const currencyFormatter = new Intl.NumberFormat("en-CA", {
   style: "currency",
@@ -27,6 +28,7 @@ export default function CheckoutSuccessPage() {
     result: null,
   });
   const router = useRouter();
+  const checkout = useCheckoutContext();
 
   useEffect(() => {
     const url = new URL(window.location.href);
@@ -65,7 +67,7 @@ export default function CheckoutSuccessPage() {
         const data = await resp.json();
         if (cancelled) return;
         if (data.paid) {
-          localStorage.removeItem('app-checkout');
+          checkout.onUpdate({ items: [], subtotal: 0, total: 0, discount: 0, shipping: 0, tax: 0, billing: null, totalItems: 0 });
           setState({ phase: "ok", msg: "Payment confirmed!", result: data });
           return;
         }
@@ -104,6 +106,7 @@ export default function CheckoutSuccessPage() {
         : null;
     return [
       { label: "Order ID", value: result.orderId || "—" },
+      { label: 'Customer email', value: result.customer_email || '—' },
       { label: "Stripe status", value: result.status || "pending" },
       { label: "Payment status", value: result.payment_status || "processing" },
       {

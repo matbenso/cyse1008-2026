@@ -37,6 +37,7 @@ export async function GET(req) {
         amount_total: session.amount_total,
         currency: session.currency,
         orderId: session.metadata?.orderId ?? null,
+        customer_email: session.customer_email ?? null,
       });
     }
 
@@ -65,6 +66,7 @@ export async function GET(req) {
       payment_status: session.payment_status,
       amount_total: session.amount_total,
       currency: session.currency,
+      customer_email: session.customer_email ?? session.customer_details?.email ?? null,
       orderId,
     });
   } catch (err) {
