@@ -67,7 +67,7 @@ export default function CheckoutSuccessPage() {
         const data = await resp.json();
         if (cancelled) return;
         if (data.paid) {
-          checkout.onUpdate({ items: [], subtotal: 0, total: 0, discount: 0, shipping: 0, tax: 0, billing: null, totalItems: 0 });
+          checkout.onClearCart();
           setState({ phase: "ok", msg: "Payment confirmed!", result: data });
           return;
         }

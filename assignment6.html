@@ -712,7 +712,6 @@ Remove-Item -Recurse -Force .next</code></pre>
         <pre><code>{
   "functions": { "source": "functions", "runtime": "nodejs20" },
   "firestore": {
-    "database": "(default)",
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"
   },
@@ -729,6 +728,31 @@ Remove-Item -Recurse -Force .next</code></pre>
   "hosting": { "source": ".", "frameworksBackend": {} }
 }</code></pre>
         Save the file, then run <code>npm run dev</code> again.
+      </li>
+      <li>
+        <strong><code>.firebaserc</code> is missing — emulator writes don't appear in the UI</strong><br/>
+        <code>.firebaserc</code> tells the Firebase CLI which project the emulator should
+        use. Without it the emulator may start, but the project ID it uses internally can
+        differ from the one the app is connecting with — so writes go into a namespace
+        that doesn't show up in the Emulator UI.<br/><br/>
+        <strong>Note:</strong> every student uses the same project ID
+        (<code>black-river-market</code>) for the local emulator. This is the shared
+        course project that your <code>.env.development</code> already points to.
+        You do <em>not</em> need your own Firebase project — the emulator runs entirely
+        on your machine and never connects to the internet.<br/><br/>
+        To check: look in the project root for a file named <code>.firebaserc</code>
+        (note the leading dot — it may be hidden in your file explorer; on Mac/Linux run
+        <code>ls -a</code> to see hidden files). If it is missing, create it with exactly
+        this content:
+        <pre><code>{
+  "projects": {
+    "default": "black-river-market"
+  },
+  "targets": {},
+  "etags": {}
+}</code></pre>
+        Save the file, stop the emulators, and run <code>npm run dev</code> again.
+        The Firestore UI should now show data as soon as a write occurs.
       </li>
       <li>
         <strong>Emulators not started</strong><br/>

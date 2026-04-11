@@ -217,6 +217,7 @@ function Container({ children }) {
       onReset,
       onUpdate: setState,
       onUpdateField: setField,
+      onClearCart: resetState,
       //
       completed,
       //
@@ -242,6 +243,7 @@ function Container({ children }) {
       onReset,
       canReset,
       setField,
+      resetState,
       completed,
       setState,
       activeStep,
