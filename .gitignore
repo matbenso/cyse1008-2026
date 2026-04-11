@@ -64,6 +64,7 @@ keys/
 # Firebase emulator exports
 .firebase-data/
 .firebase-data/**
+firebase-export-*/
 
 # Common Firebase local files
 .firebaserc

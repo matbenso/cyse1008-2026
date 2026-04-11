@@ -618,29 +618,166 @@ git push origin HEAD</code></pre>
       confirm it does not appear in the list of files to be staged.</p>
 
     <h3 style="color: #8b1e41;"><strong>Troubleshooting Documentation</strong></h3>
-    <p>If something does not work as expected, include a short note describing:</p>
+    <p>If something does not work as expected, include a short note describing what problem
+      you encountered, what you tried, and what happened. A screenshot of an error message
+      counts as troubleshooting evidence. Work through the sections below in order —
+      most issues have a clear cause and a one-line fix.</p>
+
+    <h4>Checkout does not complete or order stays "pending"</h4>
     <ul>
-      <li>What problem you encountered</li>
-      <li>What you tried to fix it</li>
-      <li>What happened as a result</li>
+      <li>
+        <strong>Dev server not restarted after editing <code>.env.development</code></strong><br/>
+        Next.js only reads environment variables at startup. Any time you add or change
+        <code>STRIPE_SECRET_KEY</code> or <code>STRIPE_WEBHOOK_SECRET</code>, stop the
+        server (<code>Ctrl+C</code>) and run <code>npm run dev</code> again.
+      </li>
+      <li>
+        <strong>Wrong Stripe key (live key instead of test key)</strong><br/>
+        Your <code>STRIPE_SECRET_KEY</code> must start with <code>sk_test_</code>.
+        If it starts with <code>sk_live_</code> you are using your production key —
+        remove it and paste the correct test key from the Stripe dashboard
+        (<strong>Developers → API keys → Secret key → Reveal test key</strong>).
+      </li>
+      <li>
+        <strong>Webhook forwarder is not running</strong><br/>
+        Open the Run and Debug panel (<code>Ctrl+Shift+D</code> / <code>Cmd+Shift+D</code>),
+        choose <strong>"Stripe: Forward webhooks"</strong> from the dropdown, and click the
+        green ▶ button. Or run this in a terminal:
+        <pre><code>stripe listen --forward-to http://localhost:3032/api/stripe/webhook</code></pre>
+        You must see the line <code>Ready! Your webhook signing secret is whsec_...</code>
+        before you test a checkout.
+      </li>
+      <li>
+        <strong><code>STRIPE_WEBHOOK_SECRET</code> is missing or stale</strong><br/>
+        The <code>whsec_...</code> secret changes every time you restart the forwarder.
+        Copy the new value from the terminal, paste it into <code>.env.development</code>,
+        and restart the dev server. To confirm the right secret is loaded, check the
+        terminal — the webhook route logs the first 8 characters of the secret on every
+        incoming event (<code>stripeWebhook secret: whsec_ab</code>). Compare that to
+        what the forwarder printed.
+      </li>
+      <li>
+        <strong>Stripe event is arriving but order still shows "pending" in Firestore</strong><br/>
+        This means the webhook handler ran but the Firestore update was skipped or failed.
+        Check the Next.js terminal for a line starting with <code>Webhook handler error</code>.
+        The most common cause is that the <code>orderId</code> was not saved in the Stripe
+        session metadata — this happens if checkout was started before the latest code was
+        pulled. Pull the latest upstream code, restart, and try a fresh checkout.
+        <br/><br/>
+        To replay the last event without going through checkout again, find the event ID in
+        the Stripe CLI output (it looks like <code>evt_1ABC...</code>) and run:
+        <pre><code>stripe events resend evt_1ABC...</code></pre>
+        Then watch the Next.js terminal for the result.
+      </li>
+      <li>
+        <strong>Success page stays on the loading spinner</strong><br/>
+        The page polls <code>/api/stripe/confirm-session</code> until Stripe confirms
+        payment. If it never resolves, open DevTools (<strong>F12 → Network</strong>),
+        find the <code>confirm-session</code> requests, and check the response. A
+        <code>400</code> or <code>500</code> response means the API route is erroring —
+        look at the Next.js terminal for the error message. A common cause is a missing
+        or wrong <code>STRIPE_SECRET_KEY</code>.
+      </li>
     </ul>
-    <p>A screenshot of an error message is valid troubleshooting evidence.
-      Common issues to check:</p>
+
+    <h4>Firebase emulators not running or Firestore data missing</h4>
     <ul>
-      <li>Dev server not restarted after updating <code>.env.development</code></li>
-      <li>Firebase emulators not running (orders collection will be empty)</li>
-      <li>Wrong key used (live key instead of test key)</li>
-      <li><code>NEXT_PUBLIC_SITE_URL</code> missing (success redirect will fail)</li>
-      <li>Stripe webhook forwarder not running — open Run and Debug
-        (<code>Ctrl+Shift+D</code>) and start <strong>"Stripe: Forward webhooks"</strong>
-        before testing checkout</li>
-      <li><code>STRIPE_WEBHOOK_SECRET</code> missing or stale — if you restarted the
-        forwarder, copy the new <code>whsec_...</code> secret from the terminal output
-        and update <code>.env.development</code>, then restart the dev server</li>
-      <li>Order stuck at <code>"pending"</code> in Firestore — this usually means the
-        webhook did not fire. Check that both the forwarder is running and the webhook
-        secret in <code>.env.development</code> matches what the forwarder printed</li>
+      <li>
+        <strong><code>firebase.json</code> is missing</strong><br/>
+        The Firebase CLI needs <code>firebase.json</code> in the project root to know
+        which emulators to start and on which ports. This file is intentionally excluded
+        from Git (it is in <code>.gitignore</code>) so that each student can have their
+        own local copy. If the file does not exist, the emulator will not start and you
+        will see an error like <em>"Cannot find firebase.json"</em> or
+        <em>"Not in a Firebase app directory"</em>.<br/><br/>
+        To check: look in the project root for a file named <code>firebase.json</code>.
+        If it is missing, create it now with exactly this content:
+        <pre><code>{
+  "functions": { "source": "functions", "runtime": "nodejs20" },
+  "firestore": {
+    "database": "(default)",
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "storage": { "rules": "storage.rules" },
+  "emulators": {
+    "functions": { "port": 5001 },
+    "firestore":  { "port": 8080 },
+    "auth":       { "port": 9099 },
+    "storage":    { "port": 9199 },
+    "ui":         { "enabled": true, "port": 4000 },
+    "hosting":    { "port": 5000 },
+    "singleProjectMode": true
+  },
+  "hosting": { "source": ".", "frameworksBackend": {} }
+}</code></pre>
+        Save the file, then run <code>npm run dev</code> again.
+      </li>
+      <li>
+        <strong>Emulators not started</strong><br/>
+        The <code>npm run dev</code> command starts both the Next.js server and the
+        emulators together. If you ran <code>npm run dev:web</code> instead, the
+        emulators are not running. Stop everything and use <code>npm run dev</code>.
+        Confirm the emulators are up by visiting
+        <strong>http://localhost:4000</strong> — you should see the Firebase Emulator UI.
+      </li>
+      <li>
+        <strong>Firestore shows no data / orders collection is empty</strong><br/>
+        The emulator starts with an empty database unless there is existing data in the
+        <code>.firebase-data</code> folder. This is expected on a fresh clone. Complete
+        a checkout — a new order document will appear in the <code>orders</code>
+        collection immediately. If you complete a checkout and still see nothing, check
+        that the emulator UI at <strong>http://localhost:4000/firestore</strong> is
+        connected (not showing a connection error) and that the webhook fired
+        successfully (see above).
+      </li>
+      <li>
+        <strong>Port already in use (EADDRINUSE)</strong><br/>
+        If another process is using port <code>8080</code>, <code>9099</code>, or
+        <code>4000</code>, the emulator will fail to start. Find and stop the conflicting
+        process:
+        <pre><code># Linux / Mac
+lsof -i :8080
+kill -9 &lt;PID&gt;
+
+# Windows (PowerShell)
+netstat -ano | findstr :8080
+taskkill /PID &lt;PID&gt; /F</code></pre>
+        Then run <code>npm run dev</code> again.
+      </li>
+      <li>
+        <strong>Emulator crashes immediately with a Node version error</strong><br/>
+        The project's <code>firebase.json</code> sets <code>"runtime": "nodejs20"</code>
+        for Cloud Functions. If your local Node version is older than 20, the Firebase
+        Functions emulator will refuse to start and take the entire dev server down with
+        it (because both run together via <code>npm run dev</code>). See the
+        <strong>Node version</strong> section below.
+      </li>
     </ul>
+
+    <h4>Checking and updating your Node version</h4>
+    <p>Run this in your terminal to see what version you have:</p>
+    <pre><code>node -v</code></pre>
+    <p>You need <strong>Node 20</strong> (e.g. <code>v20.x.x</code>). If you see v18, v16,
+      or anything older, update before running the project.</p>
+
+    <p><strong>Option A — Update with nvm (recommended, works on Mac/Linux/WSL)</strong><br/>
+    If you have nvm installed (see the NVM appendix at the end of this document):</p>
+    <pre><code>nvm install 20
+nvm use 20
+nvm alias default 20</code></pre>
+    <p>Confirm with <code>node -v</code> — it should now show <code>v20.x.x</code>.</p>
+
+    <p><strong>Option B — Install directly from nodejs.org (Mac/Windows without nvm)</strong><br/>
+    Go to <a href="https://nodejs.org" target="_blank">nodejs.org</a> and download the
+    <strong>LTS</strong> release (which is Node 20 or higher). Run the installer, then
+    close and reopen your terminal. Confirm with <code>node -v</code>.</p>
+
+    <p><strong>Option C — Windows with nvm-windows</strong><br/>
+    See the NVM appendix at the end of this document for nvm-windows installation,
+    then run:</p>
+    <pre><code>nvm install 20
+nvm use 20</code></pre>
 
     <h3 style="color: #8b1e41;"><strong>Submission</strong></h3>
     <ul>
@@ -781,6 +918,91 @@ git push origin HEAD</code></pre>
   </table>
 
   <p><strong>Total: 25 points</strong></p>
+
+</div>
+
+  <p><img style="width: 100%;" role="presentation"
+    src="https://loyalistcollege.instructure.com/courses/19609/files/6121996/preview"
+    data-api-endpoint="https://loyalistcollege.instructure.com/api/v1/courses/19609/files/6121996"
+    data-api-returntype="File" /></p>
+
+  <!-- ===== APPENDIX: NVM ===== -->
+  <h2><strong>Appendix — Installing nvm (Node Version Manager)</strong></h2>
+
+  <div style="padding: 14px 16px; border: 1px solid #ddd; border-radius: 6px; background: #fff;">
+    <p><strong>nvm</strong> lets you install and switch between multiple Node versions
+      on the same machine. It is the easiest way to ensure you are running the right
+      version for a given project. This assignment requires <strong>Node 20</strong>.</p>
+
+    <h3 style="color: #8b1e41;"><strong>Mac and Linux (including WSL on Windows)</strong></h3>
+    <p>Run this single command in your terminal — it downloads and runs the nvm install script:</p>
+    <pre><code>curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash</code></pre>
+    <p>After it finishes, <strong>close and reopen your terminal</strong> (or run
+      <code>source ~/.bashrc</code> / <code>source ~/.zshrc</code> to reload your shell
+      config). Then confirm nvm is available:</p>
+    <pre><code>nvm --version</code></pre>
+    <p>Now install and activate Node 20:</p>
+    <pre><code>nvm install 20
+nvm use 20
+nvm alias default 20</code></pre>
+    <p>The last command makes Node 20 the default for all future terminal sessions.
+      Confirm with:</p>
+    <pre><code>node -v   # should print v20.x.x</code></pre>
+
+    <h3 style="color: #8b1e41;"><strong>Windows (without WSL)</strong></h3>
+    <p>The standard nvm script does not run natively on Windows. Use
+      <strong>nvm-windows</strong> instead:</p>
+    <ol>
+      <li>Go to the
+        <a href="https://github.com/coreybutler/nvm-windows/releases" target="_blank">
+          nvm-windows releases page</a> and download <strong>nvm-setup.exe</strong>
+        from the latest release.</li>
+      <li>Run the installer and follow the prompts. Accept the default install paths.</li>
+      <li>Open a <strong>new</strong> PowerShell or Command Prompt window
+        (<em>not</em> the one you had open before — nvm-windows needs a fresh session).
+      </li>
+      <li>Install and activate Node 20:
+        <pre><code>nvm install 20
+nvm use 20</code></pre>
+      </li>
+      <li>Confirm:
+        <pre><code>node -v   # should print v20.x.x</code></pre>
+      </li>
+    </ol>
+    <p><strong>Note:</strong> on Windows you may need to run PowerShell as
+      <strong>Administrator</strong> for the <code>nvm use</code> command to work.</p>
+
+    <h3 style="color: #8b1e41;"><strong>Useful nvm commands</strong></h3>
+    <table style="border-collapse: collapse; width: 100%;" border="1">
+      <tbody>
+        <tr>
+          <th style="padding: 6px 10px; text-align: left;">Command</th>
+          <th style="padding: 6px 10px; text-align: left;">What it does</th>
+        </tr>
+        <tr>
+          <td style="padding: 6px 10px;"><code>nvm install 20</code></td>
+          <td style="padding: 6px 10px;">Download and install the latest Node 20 release</td>
+        </tr>
+        <tr>
+          <td style="padding: 6px 10px;"><code>nvm use 20</code></td>
+          <td style="padding: 6px 10px;">Switch the current terminal session to Node 20</td>
+        </tr>
+        <tr>
+          <td style="padding: 6px 10px;"><code>nvm alias default 20</code></td>
+          <td style="padding: 6px 10px;">Make Node 20 the default for all new terminals
+            (Mac/Linux only)</td>
+        </tr>
+        <tr>
+          <td style="padding: 6px 10px;"><code>nvm ls</code></td>
+          <td style="padding: 6px 10px;">List all Node versions you have installed</td>
+        </tr>
+        <tr>
+          <td style="padding: 6px 10px;"><code>node -v</code></td>
+          <td style="padding: 6px 10px;">Show the currently active Node version</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
 
 </div>
 </body>
