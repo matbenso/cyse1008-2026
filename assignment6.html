@@ -657,6 +657,23 @@ git push origin HEAD</code></pre>
         what the forwarder printed.
       </li>
       <li>
+        <strong>Secret still seems wrong even after updating <code>.env.development</code>
+          and restarting</strong><br/>
+        Next.js caches compiled code and environment values in the <code>.next</code>
+        folder. Occasionally a stale cached value survives a normal restart, so the old
+        secret keeps being used even though <code>.env.development</code> has the new one.
+        The fix is to delete the cache and do a clean restart:
+        <pre><code># Stop the dev server first (Ctrl+C), then:
+rm -rf .next
+
+# Windows (PowerShell):
+Remove-Item -Recurse -Force .next</code></pre>
+        Then run <code>npm run dev</code> again. Next.js will rebuild from scratch and
+        read the current value from <code>.env.development</code>. After it starts, check
+        the terminal for <code>stripeWebhook secret: whsec_ab</code> on the next webhook
+        event and confirm it matches the forwarder output.
+      </li>
+      <li>
         <strong>Stripe event is arriving but order still shows "pending" in Firestore</strong><br/>
         This means the webhook handler ran but the Firestore update was skipped or failed.
         Check the Next.js terminal for a line starting with <code>Webhook handler error</code>.
